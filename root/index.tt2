@@ -1,5 +1,16 @@
+[% BLOCK repos_table_headfoot %]
+[% SET cell = type == 'head' ? 'th' : 'td' %]
+<tr>
+    <[% cell %]>Repository</[% cell %]>
+    <!-- XXX These do nothing presently -->
+    <[% cell %]><a class="header" href="/?o=descr">Description</a></[% cell %]>
+    <[% cell %]><a class="header" href="/?o=owner">Owner</a></[% cell %]>
+    <[% cell %]><a class="header" href="/?o=age">Last Change</a></[% cell %]>
+    <[% cell %]></[% cell %]>
+</tr>
+[% END %]
 <div class='content'>
-  <form method="get" action="/" enctype="application/x-www-form-urlencoded">
+  <form method="get" action="[% c.uri_for_action('/search') %]" enctype="application/x-www-form-urlencoded">
    <p class="projsearch">Search:
     <input type="text" name="s" value="[% search_text %]" />
    </p>
@@ -7,39 +18,12 @@
 
   <table class="repository_list">
     <thead>
-	<tr>
-	    <th>Repository</th>
-	    <!-- XXX These do nothing presently -->
-	    <th><a class="header" href="/?o=descr">Description</a></th>
-	    <th><a class="header" href="/?o=owner">Owner</a></th>
-	    <th><a class="header" href="/?o=age">Last Change</a></th>
-	    <th></th>
-	</tr>
+		[% INCLUDE repos_table_headfoot type = 'head' %]
     </thead>
     <tfoot>
-	<tr>
-	    <td>Repository</td>
-	    <!-- XXX These do nothing presently -->
-	    <td><a href="/?o=descr">Description</a></td>
-	    <td><a href="/?o=owner">Owner</a></td>
-	    <td><a href="/?o=age">Last Change</a></td>
-	    <td></td>
-	</tr>
+		[% INCLUDE repos_table_headfoot type = 'foot'%]
     </tfoot>
 
-    <tbody class='listing'>
-      [% FOR p IN repositories %]
-	<tr>
-	    <td><a class="list" href="[% c.uri_for('/summary', {p=p.name}) %]">[% p.name %]</a></td>
-	    <td><a class="list" title="[% p.description %]" href="[% c.uri_for('/summary', {p=p.name} ) %]">[% abridged_description(p.description)  %]</a></td>
-	    <td>[% p.owner %]</td>
-	    <td class="time-since">[% time_since(p.last_change) %]</td>
-	    <td class="link"><a href="[% c.uri_for("summary", {p=p.name}) %]">summary</a>
-		| <a href="[% c.uri_for("shortlog", {p=p.name}) %]">shortlog</a>
-		| <a href="[% c.uri_for("log", {p=p.name}) %]">log</a>
-		| <a href="[% c.uri_for("tree", {p=p.name}) %]">tree</a></td>
-	</tr>
-      [% END %]
-    </tbody>
+	[% subinclude('/fragment/collectionofrepositories') %]
   </table>
 </div>

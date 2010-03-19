@@ -6,11 +6,21 @@ class Gitalist::Git::Repository with Gitalist::Git::HasUtils {
     use MooseX::Types::Path::Class qw/Dir/;
     use MooseX::Types::Moose qw/Str Maybe Bool HashRef ArrayRef/;
     use Gitalist::Git::Types qw/SHA1/;
+    use MooseX::MultiMethods;
     use Moose::Autobox;
     use List::MoreUtils qw/any zip/;
     use DateTime;
     use Encode qw/decode/;
-    use I18N::Langinfo qw/langinfo CODESET/;
+
+    use if $^O ne 'MSWin32', 'I18N::Langinfo', => qw/langinfo CODESET/;
+    BEGIN {
+        no strict 'subs';
+        *__owner = defined &langinfo
+            ? sub { map { decode(langinfo(CODESET), $_) } (getpwuid $_[0]->path->stat->uid)[6,0] }
+            : sub { return qw/OwnEr GroUp/ }
+        ;
+    }
+
     use Gitalist::Git::Object::Blob;
     use Gitalist::Git::Object::Tree;
     use Gitalist::Git::Object::Commit;
@@ -74,6 +84,15 @@ class Gitalist::Git::Repository with Gitalist::Git::HasUtils {
     }
 
     ## Public methods
+
+    multi method get_object_or_head (SHA1 $sha1) {
+        $self->get_object($sha1);
+    }
+    multi method get_object_or_head (NonEmptySimpleStr $ref) {
+        my $sha1 = $self->head_hash($ref);
+        $self->get_object($sha1);
+    }    
+    
     method head_hash (Str $head?) {
         my $output = $self->run_cmd(qw/rev-parse --verify/, $head || 'HEAD' );
         confess("No such head: " . $head) unless defined $output;
@@ -128,6 +147,7 @@ class Gitalist::Git::Repository with Gitalist::Git::HasUtils {
         if ($search) {
             $search->{type} = 'grep'
                 if $search->{type} eq 'commit';
+	    no warnings; # where's this warning coming from?
             @search_opts = (
                 # This seems a little fragile ...
                 qq[--$search->{type}=$search->{text}],
@@ -176,11 +196,11 @@ class Gitalist::Git::Repository with Gitalist::Git::HasUtils {
     method diff ( Gitalist::Git::Object :$commit!,
                   Bool :$patch?,
                   Maybe[NonEmptySimpleStr] :$parent?,
-                  NonEmptySimpleStr :$file?
+                  NonEmptySimpleStr :$filename?
               ) {
               return $commit->diff( patch => $patch,
                                     parent => $parent,
-                                    file => $file);
+                                    filename => $filename);
     }
 
     method reflog (@logargs) {
@@ -243,7 +263,7 @@ class Gitalist::Git::Repository with Gitalist::Git::HasUtils {
     }
 
     method _build_owner {
-        my ($gecos, $name) = map { decode(langinfo(CODESET), $_) } (getpwuid $self->path->stat->uid)[6,0];
+        my ($gecos, $name) = $self->__owner;
         $gecos =~ s/,+$//;
         return length($gecos) ? $gecos : $name;
     }

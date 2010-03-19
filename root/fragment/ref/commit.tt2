@@ -1,0 +1,39 @@
+<div class='commit-message'>
+  [%
+    short_cmt(Commit.comment) | html;
+    INCLUDE '_refs.tt2' object = commit;
+  %]
+  </div>
+  <!-- [% USE dumper; dumper.dump(commit.parents) %] -->
+  <dl class='commit-info'>
+   <dt>author</dt>
+    <dd><img style="float: left; padding-right: 10px" src="[% uri_for_gravatar(Commit.committer.email, 40) %]">[% Commit.author.name | html %] &lt;[% Commit.author.email %]&gt;<br/>
+	[% time_since(Commit.authored_time) %]</dd>
+   <dt style="clear: left">committer</dt>
+    <dd><img style="float: left; padding-right: 10px" src="[% uri_for_gravatar(Commit.committer.email, 40) %]">[% Commit.committer.name %] &lt;[% Commit.committer.email %]&gt;<br/>
+	[% time_since(Commit.committed_time) %]</dd>
+   <dt style="clear: left">commit</dt>
+    <dd>[% Commit.sha1 %]</dd>
+   <dt>tree</dt>
+    <dd>[% Commit.tree_sha1 %]
+	<span class='action-list'><a href="[% c.uri_for_action("/ref/tree", c.req.captures) %]">tree</a></span>
+    </dd>
+   [% FOREACH parent IN Commit.parents %]
+   <dt>parent</dt>
+    <dd>[% parent.sha1  %]
+      <span class='action-list'>
+       <a href="[% c.uri_for_action('/ref/commit', [Repository.name, parent.sha1]) %]">commit</a>
+       <a href="[% c.uri_for_action('/ref/diff_fancy', [Repository.name, parent.sha1]) %]">diff</a>
+      </span>
+     </dd>
+   [% END %]
+  </dl>
+
+  <pre class='commit-message'>[% Commit.comment | html%]</pre>
+
+  [%
+    # In the case of merge commits there will be no diff tree.
+    IF diff_tree && diff_tree.size > 0;
+      INCLUDE '_diff_tree.tt2';
+    END;
+  %]
